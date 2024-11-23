@@ -4,16 +4,19 @@ const multer = require('multer');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Usar el puerto proporcionado por Vercel
 
 // Middleware para manejar archivos estáticos
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public'))); // Aseguramos que la ruta sea correcta
 app.use(express.json());
 
 // Configurar Multer para la carga de imágenes
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'public/img'); // Carpeta donde se guardarán las imágenes
+        const uploadPath = path.join(__dirname, 'public', 'img');
+        // Crear la carpeta 'img' si no existe
+        fs.existsSync(uploadPath) || fs.mkdirSync(uploadPath);
+        cb(null, uploadPath); // Carpeta donde se guardarán las imágenes
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname)); // Renombrar archivo para evitar conflictos
@@ -23,7 +26,8 @@ const upload = multer({ storage: storage });
 
 // Ruta para obtener eventos
 app.get('/api/events', (req, res) => {
-    fs.readFile('./data/events.json', (err, data) => {
+    const filePath = path.join(__dirname, 'data', 'events.json');
+    fs.readFile(filePath, (err, data) => {
         if (err) {
             return res.status(500).json({ error: 'Error al leer los eventos.' });
         }
@@ -38,7 +42,8 @@ app.post('/api/events', upload.single('image'), (req, res) => {
 
     const newEvent = { title, date, location, status, image };
 
-    fs.readFile('./data/events.json', (err, data) => {
+    const filePath = path.join(__dirname, 'data', 'events.json');
+    fs.readFile(filePath, (err, data) => {
         if (err) {
             return res.status(500).json({ error: 'Error al leer los eventos.' });
         }
@@ -46,7 +51,7 @@ app.post('/api/events', upload.single('image'), (req, res) => {
         const events = JSON.parse(data);
         events.push(newEvent);
 
-        fs.writeFile('./data/events.json', JSON.stringify(events, null, 2), (writeErr) => {
+        fs.writeFile(filePath, JSON.stringify(events, null, 2), (writeErr) => {
             if (writeErr) {
                 return res.status(500).json({ error: 'Error al guardar el evento.' });
             }
@@ -59,7 +64,8 @@ app.post('/api/events', upload.single('image'), (req, res) => {
 app.delete('/api/events/:index', (req, res) => {
     const index = parseInt(req.params.index, 10);
 
-    fs.readFile('./data/events.json', (err, data) => {
+    const filePath = path.join(__dirname, 'data', 'events.json');
+    fs.readFile(filePath, (err, data) => {
         if (err) {
             return res.status(500).json({ error: 'Error al leer los eventos.' });
         }
@@ -71,7 +77,7 @@ app.delete('/api/events/:index', (req, res) => {
 
         events.splice(index, 1);
 
-        fs.writeFile('./data/events.json', JSON.stringify(events, null, 2), (writeErr) => {
+        fs.writeFile(filePath, JSON.stringify(events, null, 2), (writeErr) => {
             if (writeErr) {
                 return res.status(500).json({ error: 'Error al eliminar el evento.' });
             }
